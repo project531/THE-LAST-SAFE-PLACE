@@ -1,0 +1,278 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>The Last Safe Place</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&family=Caveat:wght@700&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#1b1226;--pap:#f3e2c7;--ink:#3a2418;--pink:#f2b9c0}
+html,body{height:100%;margin:0;background:var(--bg);overflow:hidden;font-family:Nunito,"Trebuchet MS",sans-serif;color:#fff4e6;user-select:none}
+canvas{display:block}
+.ui{position:fixed;pointer-events:none}
+#obj{top:16px;left:16px;background:rgba(40,28,34,.82);border:2px solid #f3e2c7;border-radius:14px;padding:10px 16px;max-width:300px}
+#obj b{font-size:17px}#obj div{margin-top:6px;font-size:15px}#obj span{display:block;text-align:right;font-weight:800}
+#ch{right:16px;bottom:16px;background:var(--pap);color:var(--ink);padding:10px 18px;font-family:Caveat,cursive;font-size:22px;transform:rotate(-2deg);border-radius:6px;text-align:center}
+#ctl{left:16px;bottom:16px;background:rgba(40,28,34,.7);padding:8px 14px;border-radius:12px;font-size:14px}
+#pr{left:50%;top:62%;transform:translateX(-50%);background:rgba(30,20,30,.85);border:2px solid #f3e2c7;border-radius:30px;padding:6px 16px;display:none;font-weight:800}
+#dlg{left:50%;bottom:70px;transform:translateX(-50%);width:min(760px,92vw);background:rgba(36,24,40,.92);border:2px solid #f3e2c7;border-radius:16px;padding:16px 22px;display:none;pointer-events:auto}
+#dn{font-family:Caveat,cursive;font-size:26px;color:var(--pink)}#dt{font-size:19px;line-height:1.45;min-height:56px}#dh{text-align:right;font-size:13px;opacity:.7}
+#vig{inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(20,8,30,.55))}
+#fl{inset:0;background:#fff;opacity:0;transition:opacity .15s}
+#fb{inset:0;background:#0a0610;opacity:0;transition:opacity 1.2s;display:flex;align-items:center;justify-content:center;text-align:center;font-family:Caveat,cursive;font-size:32px;padding:30px;z-index:5}#fb p{max-width:640px;line-height:1.4}#red{inset:0;background:radial-gradient(ellipse at center,transparent 35%,rgba(150,10,20,.8));opacity:0}#hd{left:50%;top:20%;transform:translateX(-50%);text-align:center;display:none;font-size:21px;font-weight:800;text-shadow:0 2px 8px #000}#hbw{width:240px;height:8px;background:rgba(255,255,255,.2);border-radius:6px;margin:8px auto 0}#hb{height:100%;width:0;background:#f2b9c0;border-radius:6px}#opt{display:flex;flex-direction:column;gap:8px;margin-top:8px}#opt button{font:700 17px Nunito,sans-serif;background:var(--pink);color:var(--ink);border:0;border-radius:12px;padding:9px 14px;cursor:pointer;text-align:left}
+.ov{position:fixed;inset:0;background:radial-gradient(circle at 50% 30%,#5a3a6a,#1b1226);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:9}
+.ov h1{font-family:Caveat,cursive;font-size:64px;margin:0}.ov p{max-width:560px;line-height:1.5}
+.ov button{font:800 20px Nunito,sans-serif;background:var(--pink);color:var(--ink);border:0;border-radius:30px;padding:12px 34px;cursor:pointer;margin-top:12px}
+</style></head><body>
+<div class="ov" id="ti"><h1>The Last Safe Place</h1><p>Sara tuvo que dejar la escuela de un día para otro. Acompáñala a través de la huida, el refugio y la esperanza.</p><p style="opacity:.75;font-size:14px">WASD / flechas: mover · E o Espacio: interactuar / avanzar diálogo<br>Historia ficticia inspirada en las consecuencias reales de la guerra en la infancia.</p><button id="go">Comenzar</button></div>
+<div class="ui" id="obj"><b>❗ Objetivo actual</b><div id="ot"></div><span id="oc"></span></div>
+<div class="ui" id="ch"></div><div class="ui" id="ctl">WASD Mover · E Interactuar<br>Arrastra con el ratón o Q/R: girar cámara · Rueda: zoom</div><div class="ui" id="pr">E Interactuar</div>
+<div class="ui" id="vig"></div><div class="ui" id="fl"></div><div class="ui" id="red"></div><div class="ui" id="fb"></div><div class="ui" id="hd"><div id="hm"></div><div id="hbw"><div id="hb"></div></div></div>
+<div class="ui" id="dlg"><div id="dn"></div><div id="dt"></div><div id="opt"></div><div id="dh">E / Espacio ▸</div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=i=>document.getElementById(i),rnd=(a,b)=>a+Math.random()*(b-a),V=THREE.Vector3;
+const R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));R.setSize(innerWidth,innerHeight);
+R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.outputEncoding=THREE.sRGBEncoding;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.15;
+document.body.appendChild(R.domElement);
+const S=new THREE.Scene(),cam=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,500);
+S.fog=new THREE.FogExp2(0x7a5088,.009);
+/* ---------- texturas procedurales ---------- */
+function tex(f,rx=1,ry=1){const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');f(g);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t}
+const nz=(g,n,a)=>{for(let i=0;i<n;i++){g.fillStyle=Math.random()<.5?`rgba(0,0,0,${a})`:`rgba(255,255,255,${a})`;g.fillRect(Math.random()*256,Math.random()*256,rnd(1,4),rnd(1,4))}};
+const fill=(g,c)=>{g.fillStyle=c;g.fillRect(0,0,256,256)};
+const T={
+wood:tex(g=>{fill(g,'#9a6a40');for(let y=0;y<256;y+=32){g.fillStyle='rgba(40,20,10,.6)';g.fillRect(0,y,256,2);for(let i=0;i<12;i++){g.fillStyle='rgba(60,30,10,.2)';g.fillRect(rnd(0,256),y+rnd(3,30),rnd(20,90),1)}}nz(g,2500,.08)},5,4),
+fab:tex(g=>{fill(g,'#e4e0da');g.strokeStyle='rgba(0,0,0,.07)';for(let i=0;i<256;i+=4){g.beginPath();g.moveTo(i,0);g.lineTo(i,256);g.moveTo(0,i);g.lineTo(256,i);g.stroke()}nz(g,3000,.1);for(let i=0;i<6;i++){g.fillStyle='rgba(60,40,20,.08)';g.beginPath();g.arc(rnd(0,256),rnd(0,256),rnd(10,30),0,7);g.fill()}},2,2),
+dirt:tex(g=>{fill(g,'#7a6150');nz(g,6000,.12);for(let i=0;i<60;i++){g.fillStyle='rgba(30,20,15,.25)';g.beginPath();g.arc(rnd(0,256),rnd(0,256),rnd(1,4),0,7);g.fill()}},24,24),
+asph:tex(g=>{fill(g,'#564b5c');nz(g,7000,.1);g.strokeStyle='rgba(15,10,18,.6)';for(let k=0;k<4;k++){g.beginPath();let x=rnd(0,256),y=rnd(0,256);g.moveTo(x,y);for(let i=0;i<8;i++){x+=rnd(-20,20);y+=rnd(5,25);g.lineTo(x,y)}g.stroke()}g.fillStyle='rgba(230,200,150,.5)';g.fillRect(0,124,256,6)},10,1),
+plast:tex(g=>{fill(g,'#d8c0b0');nz(g,5000,.07);g.strokeStyle='rgba(60,40,40,.35)';for(let k=0;k<5;k++){g.beginPath();let x=rnd(0,256),y=0;g.moveTo(x,y);for(let i=0;i<6;i++){x+=rnd(-15,15);y+=rnd(20,50);g.lineTo(x,y)}g.stroke()}},2,2),
+check:tex(g=>{for(let i=0;i<8;i++)for(let j=0;j<8;j++){g.fillStyle=(i+j)%2?'#f6c8d4':'#d9708f';g.fillRect(i*32,j*32,32,32)}nz(g,2000,.08)},2,2),
+board:tex(g=>{fill(g,'#2f4a40');g.strokeStyle='rgba(240,240,230,.75)';g.lineWidth=3;g.font='28px Caveat';g.fillStyle='rgba(240,240,230,.8)';g.fillText('2 + 3 = 5',20,60);g.fillText('A  B  C',130,110);g.fillText('x² + y² = r²',30,170);g.beginPath();g.arc(190,200,30,0,7);g.stroke();nz(g,1500,.08)}),
+sky:tex(g=>{const l=g.createLinearGradient(0,0,0,256);l.addColorStop(0,'#2a2250');l.addColorStop(.45,'#8a4a8a');l.addColorStop(.75,'#f0806a');l.addColorStop(1,'#ffc880');g.fillStyle=l;g.fillRect(0,0,256,256)}),
+glow:tex(g=>{const r=g.createRadialGradient(128,128,0,128,128,128);r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,256,256)}),
+bang:tex(g=>{g.fillStyle='#ffd84a';g.beginPath();g.arc(128,120,100,0,7);g.fill();g.strokeStyle='#8a5a10';g.lineWidth=8;g.stroke();g.fillStyle='#4a2a10';g.font='bold 150px Nunito';g.textAlign='center';g.fillText('!',128,175)}),
+cross:tex(g=>{fill(g,'#f3efe8');g.fillStyle='#c8302a';g.fillRect(100,50,56,156);g.fillRect(50,100,156,56)}),
+flag:tex(g=>{fill(g,'#3a78c4');g.strokeStyle='#fff';g.lineWidth=8;g.beginPath();g.arc(128,128,60,0,7);g.stroke();g.beginPath();g.moveTo(68,128);g.lineTo(188,128);g.moveTo(128,68);g.lineTo(128,188);g.stroke()})};
+S.background=T.sky;try{const pm=new THREE.PMREMGenerator(R);S.environment=pm.fromEquirectangular(T.sky).texture;pm.dispose()}catch(e){}
+const M=(c,m,r=.9)=>new THREE.MeshStandardMaterial({color:c,map:m||null,bumpMap:m||null,bumpScale:m===T.fab?.8:2.2,roughness:r,metalness:0,envMapIntensity:.6});
+const BM=(c,m)=>new THREE.MeshBasicMaterial({color:c,map:m||null,fog:false});
+function B(w,h,d,m,x,y,z,p=S,rx=0,ry=0,rz=0){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.rotation.set(rx,ry,rz);o.castShadow=o.receiveShadow=true;p.add(o);return o}
+function C(rt,rb,h,m,x,y,z,p=S,sg=14){const o=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,sg),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;p.add(o);return o}
+function Sp(r,m,x,y,z,p=S,sx=1,sy=1,sz=1){const o=new THREE.Mesh(new THREE.SphereGeometry(r,20,14),m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;p.add(o);return o}
+function P(w,d,m,x,y,z,p=S,ry=0){const o=new THREE.Mesh(new THREE.PlaneGeometry(w,d),m);o.rotation.x=-Math.PI/2;o.position.set(x,y,z);o.receiveShadow=true;p.add(o);return o}
+function PL(w,h,m,x,y,z,ry=0,p=S){const o=new THREE.Mesh(new THREE.PlaneGeometry(w,h),m);o.position.set(x,y,z);o.rotation.y=ry;p.add(o);return o}
+/* ---------- iluminación cinematográfica ---------- */
+S.add(new THREE.HemisphereLight(0xffb89a,0x3a2a5a,.4));
+const sun=new THREE.DirectionalLight(0xff9a5a,2.6);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-32,right:32,top:32,bottom:-32,near:1,far:140});sun.shadow.bias=-.0004;sun.shadow.normalBias=.04;S.add(sun,sun.target);
+const rim=new THREE.DirectionalLight(0x7a8aff,.55);rim.position.set(-30,25,40);S.add(rim);
+const lights=[];function lamp(x,y,z,c=0xffb070,i=1.4,d=12){const l=new THREE.PointLight(c,i,d,1.6);l.position.set(x,y,z);S.add(l);lights.push([l,i]);return l}
+/* ---------- chibi ---------- */
+function chibi(o){const g=new THREE.Group(),sk=M(o.skin||0xeab08a,null,.55),hm=M(o.hair,null,.5),cl=M(o.cloth,T.fab,.9);
+const sc=o.s||1;sk.emissive=new THREE.Color(0x2a0e06);g.userData.legs=[];
+[-.17,.17].forEach(x=>{const l=new THREE.Group();l.position.set(x,.62,0);C(.12,.11,.55,M(o.pants||0x3a5a8a,T.fab),0,-.28,0,l);Sp(.16,M(0xf2f0ee,null,.6),0,-.58,.05,l,1,.6,1.4);g.add(l);g.userData.legs.push(l)});
+C(.32,.4,.75,cl,0,.98,0,g,16);C(.2,.2,.1,cl,0,1.4,0,g);
+[-1,1].forEach(s=>{const a=new THREE.Group();a.position.set(s*.42,1.28,0);C(.1,.09,.45,cl,0,-.2,0,a);Sp(.1,sk,0,-.45,0,a);g.add(a);g.userData['a'+s]=a});
+const hd=new THREE.Group();hd.position.y=1.82;g.add(hd);g.userData.head=hd;
+Sp(.56,sk,0,0,0,hd,1,.95,1);
+[-.2,.2].forEach(x=>{Sp(.075,M(0x120a0c,null,.15),x,-.04,.5,hd,1,1.5,.5);Sp(.022,M(0xffffff),x+.02,.02,.55,hd);const b=new THREE.Mesh(new THREE.CircleGeometry(.09,16),new THREE.MeshBasicMaterial({color:0xf08a8a,transparent:true,opacity:.5}));b.position.set(x*1.55,-.19,.5);b.lookAt(x*3,-.2,3);hd.add(b)});
+const mo=new THREE.Mesh(new THREE.TorusGeometry(.05,.013,6,12,Math.PI),M(0x7a3a30));mo.position.set(0,-.22,.54);mo.rotation.z=Math.PI;hd.add(mo);
+[-.56,.56].forEach(x=>Sp(.09,sk,x,-.05,0,hd));
+if(o.beanie){const b=new THREE.Mesh(new THREE.SphereGeometry(.6,24,14,0,7,0,1.5),M(o.beanie,T.fab));b.position.y=.04;b.castShadow=true;hd.add(b);Sp(.1,M(o.beanie,T.fab),0,.62,0,hd)}
+else{const t=new THREE.Mesh(new THREE.SphereGeometry(.585,26,16,0,7,0,1.15),hm);t.position.y=.02;t.castShadow=true;hd.add(t);
+const bk=new THREE.Mesh(new THREE.SphereGeometry(.59,26,16,Math.PI,Math.PI,0,o.long?2.5:1.9),hm);bk.position.y=.02;bk.castShadow=true;hd.add(bk);
+for(let i=-2;i<=2;i++)Sp(.17,hm,i*.19,.42-Math.abs(i)*.03,.4,hd,1,.7,.6);
+if(o.long){Sp(.4,hm,0,-.55,-.3,hd,1,1.5,.6)}if(o.bun)Sp(.2,hm,0,.62,-.15,hd);
+if(o.braid)[-1,1].forEach(s=>{for(let i=0;i<4;i++)Sp(.09,hm,s*.5,-.5-i*.2,.1,hd)})}
+if(o.glasses){const gm=M(0x1a1a1a,null,.3);[-.2,.2].forEach(x=>{const r=new THREE.Mesh(new THREE.TorusGeometry(.12,.017,8,18),gm);r.position.set(x,-.02,.54);hd.add(r)});B(.12,.02,.02,gm,0,0,.54,hd)}
+if(o.scarf){const s=new THREE.Mesh(new THREE.TorusGeometry(.3,.1,10,18),M(o.scarf,T.fab));s.rotation.x=Math.PI/2;s.position.y=1.42;g.add(s)}
+if(o.pack){B(.6,.75,.3,M(o.pack,T.fab),0,1.05,-.4,g)}
+if(o.book)B(.3,.38,.07,M(0x3a4a8a),.1,1.0,.4,g,.3,0,.2);
+{const sh=new THREE.Mesh(new THREE.CircleGeometry(.55,20),new THREE.MeshBasicMaterial({color:0,map:T.glow,transparent:true,opacity:.55,depthWrite:false}));sh.rotation.x=-Math.PI/2;sh.position.y=.03;g.add(sh)}g.scale.setScalar(sc);g.traverse(m=>{if(m.isMesh)m.castShadow=true});S.add(g);return g}
+/* ---------- humo y marcadores ---------- */
+const smokes=[];function smoke(x,z,h=1){for(let i=0;i<14;i++){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:T.glow,color:0x3a2c40,transparent:true,opacity:.4,depthWrite:false}));s.userData={x,z,t:i/14};smokes.push(s);S.add(s)}}
+/* ---------- HABITACIÓN (abierta desde arriba) ---------- */
+const WD=M(0xffffff,T.wood,.7),PL_=M(0xe8b8c0,T.plast),WW=M(0xb07a48,T.wood,.6);
+B(14,.2,11,WD,0,-.1,-.5);
+B(14,5,.3,PL_,0,2.5,-6.15);B(.3,5,11,PL_,-7.15,2.5,-.5);B(.3,5,4.4,PL_,7.15,2.5,-3.8);B(.3,5,3.4,PL_,7.15,2.5,3.3);B(.3,1.6,3.2,PL_,7.15,4.2,0);B(14,.7,.3,PL_,0,.35,5.15);
+PL(2.8,2.2,BM(0xffffff,T.sky),3,3.1,-5.97);[[0,1.2,3.1,.2],[0,-1.2,3.1,.2],[-1.5,0,.2,2.6],[1.5,0,.2,2.6],[0,0,.1,2.4]].forEach(a=>B(a[2],a[3]+(a[2]<.15?0:0),.25,WW,3+a[0],3.1+a[1],-5.95));B(.1,2.4,.25,WW,3,3.1,-5.95);
+B(.5,3,.3,M(0xf0dcc8,T.fab),1,3.1,-5.7);B(.5,3,.3,M(0xf0dcc8,T.fab),5,3.1,-5.7);
+PL(2.4,1.6,BM(0xffffff,T.sky),-2,3.4,-5.97);B(2.6,1.8,.1,WW,-2,3.4,-6.02);
+/* cama */
+B(3.4,.5,5,WW,-4.6,.4,-3);B(.2,1.6,3.4,WW,-4.6,1,-5.6).rotation.y=Math.PI/2;B(3,.45,4.8,M(0xffffff,T.check),-4.6,.85,-3);B(2.4,.3,1,M(0xf5f0ea,T.fab),-4.6,1.2,-5);
+Sp(.4,M(0xa8703a,T.fab),-3.4,1.45,-4.4);Sp(.28,M(0xa8703a,T.fab),-3.4,1.9,-4.4);
+B(.8,.9,.4,M(0x7a4aa0,T.fab),-4.2,1.5,-3.2);B(.5,.4,.1,M(0x6a3a90,T.fab),-4.2,1.35,-2.95);
+/* escritorio */
+B(4,.2,1.8,WW,3,1.5,-5);[-1.8,1.8].forEach(x=>B(.2,1.4,1.6,WW,3+x,.75,-5));B(1.8,1,1.5,WW,4.1,.7,-5);
+const ch1_=B(1.2,.15,1.1,WW,2.5,.95,-3.6);B(.15,1,1.1,WW,2.5,1.45,-3.1);[[-.5,-.5],[.5,-.5],[-.5,.5],[.5,.5]].forEach(a=>B(.1,.9,.1,WW,2.5+a[0],.45,-3.6+a[1]));
+C(.45,.55,.15,M(0xc83a50,null,.5),4.4,1.68,-5.3);C(.04,.04,1,M(0x333333),4.4,2.2,-5.3);C(.1,.45,.5,M(0xe0506a,null,.4),4.1,2.8,-5.1).rotation.z=.9;lamp(4,2.7,-5,0xffb070,1.6,10);
+B(1.1,.12,.8,M(0xf4eede),2.4,1.65,-4.8);[0x4a6aa0,0xa04a4a,0x4aa06a,0xa08a3a].forEach((c,i)=>B(.14,.8,.6,M(c),3.4+i*.15,1.9,-5.5));
+/* estante */
+B(.6,.15,4.4,WW,-6.8,3.3,-.5);for(let i=0;i<12;i++)B(.5,rnd(.5,.8),.22,M(new THREE.Color().setHSL(rnd(0,1),.45,.45)),-6.8,3.7,-2.2+i*.3);
+/* alfombra, planta, cómoda, foto */
+P(5,3.6,M(0xa860a0,T.check),-1,.03,0);C(.45,.35,.7,M(0xb0623a),-6,.35,3.8);for(let i=0;i<7;i++)Sp(.35,M(0x4a8a3a,null,.7),-6+rnd(-.4,.4),1.1+rnd(0,.9),3.8+rnd(-.4,.4));
+B(1.8,1.8,3.2,WW,6.1,.9,2.7);B(.12,1,.8,WW,5.4,2.3,2.7,S,0,0,-.25);PL(.7,.9,M(0xc8a888,T.plast),5.34,2.3,2.7,Math.PI/2*-1+0).rotation.set(0,-Math.PI/2,0);
+C(.7,.7,.04,M(0xc8a080),-6,.02,1,S,20);
+/* ---------- CALLE (escenarios conectados) ---------- */
+P(62,13,M(0xffffff,T.asph),38,.01,0);P(300,120,M(0xffffff,T.dirt),60,-.05,-30);
+B(62,.2,1.6,M(0x8a7a84,T.plast),38,.1,-7);B(62,.2,1.6,M(0x8a7a84,T.plast),38,.1,7);
+const pal=[0xd8b8a0,0xc8a890,0xb89888,0xe0c0a8];
+for(let x=11;x<64;x+=rnd(9,11))[-1,1].forEach(s=>{const h=rnd(6,14),w=rnd(7,9),m=M(pal[(Math.random()*4)|0],T.plast);
+B(w,h,8,m,x,h/2,s*11.5);for(let r=1;r<h/3;r++)for(let c=0;c<3;c++)PL(1.2,1.5,BM(Math.random()<.3?0xffb35a:0x2a1c30),x-w/3+c*w/3,r*3,s*7.47,s>0?Math.PI:0);
+if(Math.random()<.6){B(w*.6,3,6,m,x+rnd(-1,1),h+1,s*11.5,S,rnd(-.2,.2),rnd(-.3,.3),rnd(-.3,.3))}
+for(let i=0;i<4;i++)Sp(rnd(.4,1),M(0x6a6068,T.dirt),x+rnd(-5,5),.3,s*rnd(6,8.5),S,1.4,.8,1).rotation.set(rnd(0,3),rnd(0,3),0)});
+for(let i=0;i<30;i++){const o=new THREE.Mesh(new THREE.DodecahedronGeometry(rnd(.2,.7)),M(0x7a7078,T.dirt));o.position.set(rnd(8,66),.25,rnd(-6,6)*(Math.random()<.7?1.05:.6)*(Math.random()<.5?1:1));o.position.z=Math.sign(rnd(-1,1))*rnd(4.5,6.2);o.rotation.set(rnd(0,3),rnd(0,3),0);o.castShadow=true;S.add(o)}
+[[18,-4,.3],[42,3.5,-.2],[55,-3.5,.1]].forEach(a=>{const c=M(0x8a4a3a,T.plast,.8);B(3.4,.8,1.7,c,a[0],.7,a[1],S,0,a[2],0);B(1.8,.7,1.5,M(0x5a4a50),a[0]-.2,1.4,a[1],S,0,a[2],0);[-1,1].forEach(s=>[-1,1].forEach(t=>C(.4,.4,.3,M(0x222222),a[0]+s*1.1,.4,a[1]+t*.85,S,12).rotation.x=Math.PI/2))});
+for(let x=14;x<66;x+=13)[-1,1].forEach(s=>{C(.08,.1,5,M(0x3a3a40),x,2.5,s*6.2);B(1.2,.1,.1,M(0x3a3a40),x,5,s*5.7)});
+[[20,-10],[38,10],[52,-9],[10,8],[62,9]].forEach(a=>smoke(a[0],a[1]));
+/* fondo urbano lejano y sol */
+for(let x=-30;x<190;x+=rnd(5,9)){const h=rnd(8,34);B(rnd(5,9),h,6,M(0x2c2042),x,h/2-1,rnd(-85,-60))}
+for(let x=-20;x<180;x+=40)smoke(x,-70);
+const sunS=new THREE.Sprite(new THREE.SpriteMaterial({map:T.glow,color:0xffb060,fog:false,blending:THREE.AdditiveBlending,depthWrite:false}));sunS.scale.set(70,70,1);sunS.position.set(120,16,-140);S.add(sunS);
+/* ---------- CAMPAMENTO ---------- */
+const TF=c=>M(c,T.fab,.95);
+function tent(x,z,w,d,h,col,ry=0,li=false){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=ry;S.add(g);const m=TF(col),L=Math.hypot(w/2,h),a=Math.atan2(h,w/2);
+B(L,.08,d,m,-w/4,h/2,0,g,0,0,a);B(L,.08,d,m,w/4,h/2,0,g,0,0,-a);B(w,h*.7,.08,m,0,h*.35,-d/2,g);[-1,1].forEach(s=>B(.08,h*.45,d,m,s*w/2,h*.22,0,g));
+B(w-.3,.05,d-.2,M(0x8a6a50,T.fab),0,.03,0,g);C(.05,.05,h,M(0x4a3a2a),0,h/2,d/2-.1,g);if(li)lamp(x,h-.6,z,0xffb060,1.3,10);return g}
+tent(72,-12,8,6,3.6,0xdad2c0,0,true);
+const sup=tent(80,-12,7,6,3.4,0xf0ece4,0,true);PL(1.8,1.4,M(0xffffff,T.cross),80,2,-14.9);B(2.5,.9,1.2,TF(0xe8e4dc),80,.5,-12.6);
+const cls=tent(100,-12,10,7,4.2,0xcfc4a8,0,true);PL(4,2.4,M(0xffffff,T.board),100,2.2,-15.4);[-3,0,3].forEach(x=>[-1,1].forEach(z=>{B(1.6,.1,.8,WW,100+x,1,-12+z*1.5);B(1.4,.1,.5,WW,100+x,.55,-10.8+z*1.5)}));
+tent(84,12,8,6,3.6,0xcab89c,Math.PI,true);[0,1,2,3].forEach(i=>B(.9,.9,.5,M(new THREE.Color().setHSL(.08+i*.1,.3,.5)),82+i,.5,14));B(.1,.1,.1,WW,0,0,0);
+const prj=tent(112,12,10,7,4,0xcfc4a8,Math.PI,true);B(5,.15,1.4,WW,112,1,12);[-3,3].forEach(x=>B(1.2,1,1,M(0xb89868,T.fab),112+x,.5,14));B(.6,.6,.6,M(0xb89868,T.fab),110,1.4,12);
+[[68,-18],[76,-20],[88,-19],[92,-14.5],[96,-20],[106,-19],[116,-18],[64,17],[72,19],[94,19],[100,20],[120,18],[124,-17]].forEach((a,i)=>tent(a[0],a[1],8,6,3.4,[0xd0c4aa,0xc0b49a,0xe0d6c0][i%3],a[1]<0?0:Math.PI));
+/* bandera, barriles, fogata, luces */
+C(.06,.06,6,M(0x333333),66,3,-4);PL(2.4,1.5,M(0xffffff,T.flag),67.3,5.2,-4).material.side=2;
+[[88,2],[90.6,2.4],[76,5],[104,4],[108,-5]].forEach(a=>{C(.45,.45,1.1,M(0x4a6a9a,null,.5),a[0],.55,a[1])});
+for(let i=0;i<5;i++)B(1,1,1,M(0xb89060,T.fab),94+(i%3)*1.05,.5+(i>2?1:0),-6+(i>2?.5:0));
+C(.5,.45,1,M(0x3a2a24,null,.5),90,.5,-1);const fire=lamp(90,1.6,-1,0xff8a3a,3,16),fm=Sp(.3,BM(0xff9a40),90,1.2,-1,S,1,1.5,1);
+for(let x=66;x<128;x+=11){C(.05,.05,5,M(0x4a3a2a),x,2.5,-14);C(.05,.05,5,M(0x4a3a2a),x,2.5,14);for(let i=0;i<=12;i++){const t=i/12;Sp(.09,BM(0xffd9a0),x,4.9-Math.sin(t*Math.PI)*.8,-14+t*28)}}
+/* mirador */
+P(18,26,M(0x6a6068,T.plast),128,.02,0);B(.8,1.2,26,M(0x7a7078,T.plast),136,.6,0);B(3,.6,.9,M(0x8a8088,T.plast),127,.4,-2);B(3.2,.2,1.2,M(0x8a8088,T.plast),127,.75,-2);B(1.4,3,1.4,M(0x7a7078,T.plast),121,1.5,-10,S,.1,.3,.1);
+/* ---------- personajes ---------- */
+const sara=chibi({cloth:0xe8b020,pants:0x3a5a8a,hair:0x4a2a1a,long:1,pack:0x7a4a2a});sara.position.set(0,0,1);
+const omar=chibi({cloth:0x3a5a8a,pants:0x5a3a2a,hair:0x6a3a20,s:.78});omar.position.set(-1.5,0,-1);
+const NPC={maya:chibi({cloth:0x5a4a6a,hair:0x1a1218,glasses:1,braid:1,book:1}),yusuf:chibi({cloth:0x5a6270,hair:0x2a1c14,beanie:0x7a726c}),elena:chibi({cloth:0x7a4a38,hair:0x3a2216,bun:1,scarf:0xb04a3a}),amir:chibi({cloth:0x6a6a70,hair:0x2a1810}),leila:chibi({cloth:0x3a5aa0,hair:0x4a2a20,bun:1,s:1.05}),karim:chibi({cloth:0x8a7a52,hair:0x8a8480,glasses:1,s:1.1}),rami:chibi({cloth:0x4a6a4a,hair:0x2a1810})};
+const pos={maya:[82,8.5],yusuf:[88,-6.5],elena:[93,6],amir:[97,1],leila:[70,-3],karim:[100,-8.5],rami:[110,8.2]};
+for(const k in pos){NPC[k].position.set(pos[k][0],0,pos[k][1]);NPC[k].visible=false}
+/* ---------- estado, misiones y diálogos ---------- */
+let ch=0,limitX=6,got=0,goal=0,lock=true,dlg=null,typing=0,cb=null,follow=false,ended=false,shake=0,asking=0,holdT=0,holdMax=0,holdCb=null,beat=0,fear=0;
+const items=[],trig=[];
+Object.assign(NPC,{mama:chibi({cloth:0xb0505e,pants:0x4a3a4a,hair:0x3a2018,long:1,s:1.1}),papa:chibi({cloth:0x4a5a6a,pants:0x3a3a40,hair:0x2a1a14,glasses:1,s:1.15})});
+NPC.mama.position.set(1,0,2.4);NPC.papa.position.set(5,0,-2);
+/* ambiente extra: polvo/ceniza, rayos de luz, detalles */
+const dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(1800).map(()=>rnd(-20,20)),3));
+const dust=new THREE.Points(dg,new THREE.PointsMaterial({size:.14,map:T.glow,color:0xffd9b0,transparent:true,opacity:.6,depthWrite:false,blending:THREE.AdditiveBlending}));dust.frustumCulled=false;S.add(dust);
+for(let i=0;i<3;i++){const s=new THREE.Mesh(new THREE.PlaneGeometry(1.1,9),new THREE.MeshBasicMaterial({color:0xffb070,transparent:true,opacity:.07,blending:THREE.AdditiveBlending,depthWrite:false,side:2,fog:false}));s.position.set(1.4+i*1.5,2.4,-3.2+i*.3);s.rotation.set(0,.1,.62);S.add(s)}
+for(let i=0;i<40;i++)B(.4,.02,.3,M(0xe8e0d0),rnd(8,66),.03,rnd(-6,6),S,0,rnd(0,3),0);
+for(let i=0;i<14;i++)B(1,.45,.6,M(0xa08a66,T.fab),66+i*2.2,.25,14.8,S,0,rnd(-.1,.1),0);
+[[70,-9],[96,9],[116,-9],[78,9]].forEach(a=>{C(.05,.05,3.4,M(0x4a3a2a),a[0],1.7,a[1]);C(.05,.05,3.4,M(0x4a3a2a),a[0]+6,1.7,a[1]);for(let j=0;j<5;j++)B(.7,.9,.03,TF(new THREE.Color().setHSL(rnd(0,1),.35,.55)),a[0]+.7+j*1,2.6,a[1])});
+B(2.6,1.6,.12,WW,73,1.6,6.4);B(.12,1.6,.12,WW,71.8,.8,6.4);B(.12,1.6,.12,WW,74.2,.8,6.4);for(let i=0;i<14;i++)B(.3,.4,.02,M(0xf0e8d8),71.9+(i%7)*.38,1.3+Math.floor(i/7)*.5,6.32);
+/* audio */
+let AC;function snd(f,d,ty='sine',v=.2,s=0){if(!AC)return;const t=AC.currentTime+s,o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(Math.max(20,f*.4),t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d)}
+const thump=()=>{snd(60,.18,'sine',.4);snd(50,.2,'sine',.3,.2)},bomb=()=>{snd(90,1.8,'sawtooth',.35);snd(40,2.2,'sine',.6)};
+function drone(){const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=48;g.gain.value=.05;o.connect(g);g.connect(AC.destination);o.start()}
+/* utilidades */
+const mk=()=>{const s=new THREE.Sprite(new THREE.SpriteMaterial({map:T.bang,depthTest:false}));s.scale.set(.9,.9,1);s.renderOrder=9;S.add(s);return s};
+function inter(x,z,fn,once=true){const m=mk();m.position.set(x,2.9,z);items.push({x,z,fn,m,once,on:1})}
+function clearItems(){items.forEach(i=>i.m.visible=false);items.length=0}
+function setObj(t,n=0){got=0;goal=n;$('ot').textContent=t;$('oc').textContent=n?`0/${n}`:''}
+function inc(){got++;$('oc').textContent=`${got}/${goal}`;return got>=goal}
+function lab(t){$('ch').innerHTML=t}
+function mood(n){S.background=n?new THREE.Color(0x160d2a):T.sky;S.fog.color.set(n?0x1a1230:0x7a5088);sun.intensity=n?.35:2.6;sunS.visible=!n}
+function say(l,f){dlg=l.slice();cb=f;$('dlg').style.display='block';show()}
+function show(){const d=dlg[0];$('dn').textContent=d[0];$('dt').textContent='';typing=d[1].length;let i=0;const t=setInterval(()=>{if(!typing){clearInterval(t);return}i++;$('dt').textContent=d[1].slice(0,i);if(i>=d[1].length){typing=0;clearInterval(t)}},22)}
+function next(){if(asking)return;const d=dlg[0];if(typing){typing=0;$('dt').textContent=d[1];return}dlg.shift();if(dlg.length)show();else{dlg=null;$('dlg').style.display='none';const f=cb;cb=null;f&&f()}}
+function ask(q,opts,f){asking=1;dlg=[['Sara',q]];typing=0;$('dlg').style.display='block';$('dn').textContent='Sara';$('dt').textContent=q;$('dh').style.display='none';const b=$('opt');b.innerHTML='';
+opts.forEach(o=>{const x=document.createElement('button');x.textContent=o[0];x.onclick=()=>{b.innerHTML='';asking=0;dlg=null;$('dlg').style.display='none';$('dh').style.display='';say(o[1],()=>f&&f(o[2]))};b.appendChild(x)})}
+function hold(sec,msg,f){holdT=holdMax=sec;holdCb=f;$('hm').textContent=msg;$('hb').style.width='0%';$('hd').style.display='block';lock=false}
+function flash(a=1){const e=$('fl');e.style.opacity=a;setTimeout(()=>e.style.opacity=0,150)}
+function fade(f,t){const e=$('fb');e.innerHTML=t?`<p>${t}</p>`:'';e.style.opacity=1;setTimeout(()=>{f&&f();e.style.opacity=0},t?Math.min(5200,2200+t.length*40):1300)}
+function near(){let b=null,bd=2.6;items.forEach(i=>{if(!i.on)return;const d=Math.hypot(i.x-sara.position.x,i.z-sara.position.z);if(d<bd){bd=d;b=i}});return b}
+function use(){const i=near();if(!i||dlg||lock||holdCb)return;i.fn(i)}
+function done(i){if(i.once){i.on=0;i.m.visible=false}}
+/* Capítulo 1 */
+function ch1(){ch=1;lab('Capítulo 1<br><small>Antes de que todo cambiara</small>');setObj('Prepara tu mochila para la escuela.',3);
+const q=(x,z,l)=>inter(x,z,i=>say(l,()=>{done(i);if(inc())bye()}));
+q(-4.2,-1.8,[['Sara','Mi mochila morada. Hoy hay examen de matemáticas… quiero sacar la mejor nota.']]);
+q(3,-3.6,[['Sara','Mi cuaderno de apuntes. Algún día seré ingeniera y construiré escuelas en todo el país.']]);
+q(5,1.8,[['Sara','Papá, mamá, Omar y yo en su último cumpleaños. Mi lugar favorito del mundo es donde estamos juntos.']]);
+inter(-1.5,-1,i=>say([['Omar','¡Mira, Sara! Mi camión de bomberos va a salvar la ciudad.'],['Sara','Eres el mejor bombero, Omar. Alístate, ya casi salimos.']]),false)}
+function bye(){setObj('Despídete de tu familia antes de salir.',2);let n=0;const f=i=>{done(i);if(inc()&&!n){n=1;calm()}};
+inter(1,2.4,i=>say([['Mamá','Sara, hay pan caliente. Come algo antes de irte; los exámenes se piensan mejor con el estómago lleno.'],['Sara','Sí, mamá. Gracias.']],()=>f(i)));
+inter(5,-2,i=>say([['Papá','La radio dice que hoy habrá tensión en el norte. No se preocupen, aquí estamos lejos.'],['Sara','¿Estás seguro, papá?'],['Papá','Seguro, no. Pero estamos juntos, y eso es lo importante. Anda, que se hace tarde.']],()=>f(i)))}
+function calm(){lock=true;say([['Narrador','De pronto la radio se corta. Un silencio pesado llena toda la casa.'],['Papá','¿Lo oyen? …No se oye nada. Ni los pájaros.']],()=>hold(5,'Algo no está bien… suelta las teclas y quédate quieta',boom))}
+function boom(){lock=true;bomb();shake=3;flash();mood(0);S.fog.color.set(0x8a4a4a);
+setTimeout(()=>say([['Narrador','Un estruendo rompe la mañana…'],['Omar','¡Sara, tengo miedo!'],['Sara','Ven conmigo. No me sueltes la mano. Tenemos que salir ya.'],['Mamá','¡Salgan por la calle! ¡Nos encontraremos en el refugio!']],()=>fade(ch2,'Diario de Sara<br>“Salimos corriendo. Dejé mi cuaderno, mi cama y mi foto. No sabía que esa sería la última mañana en mi cuarto.”')),1500)}
+/* Capítulo 2 */
+function ch2(){ch=2;lock=false;follow=true;clearItems();NPC.mama.visible=NPC.papa.visible=false;mood(0);limitX=60;lab('Capítulo 2<br><small>A Home Left Behind</small>');setObj('Reúne suministros en el camino de desplazamiento.',3);
+sara.position.set(7.5,0,0);omar.position.set(6.5,0,.8);
+const q=(x,z,l,c=1)=>inter(x,z,i=>say(l,()=>{done(i);if(c&&inc()){limitX=70;setObj('Llega al refugio temporal.');say([['Omar','Sara… ¿eso de allá es un refugio?'],['Sara','Sí. Lo logramos, Omar. Un paso más.']])}}));
+q(24,2.5,[['Sara','Una botella de agua. Hay que cuidarla: no sabemos cuánto falta.']]);
+q(40,-3,[['Sara','Un pan casi intacto. Lo repartiremos con Omar.']]);
+q(52,3,[['Sara','Una manta. Esta noche hará frío… y Omar la necesita más que yo.']]);
+q(14,3.5,[['Sara','Una muñeca olvidada en la acera. Alguien salió tan rápido que no pudo llevársela.']],0);
+q(46,-4.5,[['Sara','Una mochila escolar, con un cuaderno de dibujos adentro. ¿Dónde estará su dueña ahora?']],0);
+trig.push({x:20,f:()=>{lock=true;shake=1;snd(70,2,'sawtooth',.3);say([['Narrador','Un rugido cruza el cielo. Omar se aferra a tu mano.'],['Omar','Sara… ¿van a volver?']],()=>hold(5,'¡Silencio! Suelta las teclas y quédate quieta',()=>ask('¿Qué haces?',[['Abrazo a Omar y le tapo los oídos',[['Sara','Shhh… cierra los ojos. Cuéntame otra vez de tu camión de bomberos.'],['Omar','Va a salvar a todos… ¿verdad?']],0],['Me quedo paralizada, sin poder hablar',[['Sara','(No puedo moverme… solo quiero que pase. Tengo que ser fuerte por Omar.)']],1]],()=>lock=false)))}});
+trig.push({x:32,f:()=>{lock=true;bomb();shake=1.5;flash(.6);say([['Narrador','La multitud huye entre el humo. Sara pierde de vista a sus padres.'],['Sara','¡Mamá! ¡Papá!'],['Omar','¿Dónde están?'],['Sara','Los encontraremos. Te lo prometo. Sigamos hacia las luces del refugio.']],()=>lock=false)}});
+trig.push({x:46,f:()=>{lock=true;say([['Narrador','Sirenas a lo lejos. Pasos apresurados. El aire huele a polvo y a miedo.']],()=>hold(6,'No te muevas… alguien se acerca',()=>ask('Omar quiere volver a buscar a mamá y papá.',[['“No podemos volver. Ellos nos esperan en el refugio.”',[['Omar','¿Y si no llegan?'],['Sara','Llegarán. Y si no, yo cuidaré de ti. Siempre.']],0],['“Está bien tener miedo. Yo también lo tengo.”',[['Omar','¿Tú también?'],['Sara','Sí. Pero juntos somos más valientes.']],1]],()=>lock=false)))}});
+trig.push({x:68,f:()=>{lock=true;fade(ch3,'Diario de Sara<br>“Llegamos a un refugio. Todo es nuevo, pero el ruido sigue dentro de mí.”')}})}
+/* Capítulo 3 */
+function ch3(){ch=3;lock=false;limitX=98;clearItems();for(const k in pos)NPC[k].visible=true;lab('Capítulo 3<br><small>The Invisible Wounds</small>');setObj('Conoce a otros jóvenes del refugio.',3);
+sara.position.set(69,0,2);omar.position.set(68,0,3);
+say([['Doña Leila','Bienvenidos. Aquí están a salvo. Soy Leila, trabajo con la ayuda humanitaria.'],['Sara','Mis padres… nos separamos en el camino.'],['Doña Leila','Anotaré sus nombres y buscaremos a su familia. Mientras tanto, conoce a los otros jóvenes: todos han vivido algo parecido.']]);
+let n=0;const q=(k,l)=>inter(...pos[k],i=>say(l,()=>{done(i);if(inc()&&!n){n=1;list()}}));
+q('maya',[['Maya','Soy Maya. Leo cada noche: los libros me recuerdan que existe un mañana.'],['Sara','Yo dejé mis estudios de un día para otro…'],['Maya','Aprender es una forma de resistir. Nadie puede quitártelo.']]);
+q('yusuf',[['Yusuf','A veces el ruido de la noche me deja sin aire. Es ansiedad, dicen.'],['Sara','Yo también oigo explosiones cuando cierro los ojos.'],['Yusuf','No es debilidad. Hablarlo ayuda. Aquí nadie te juzga.']]);
+q('elena',[['Elena','¡Sara! Pensé que no te volvería a ver.'],['Sara','Elena… ¿qué pasó con tus estudios?'],['Elena','Cerraron la escuela. Tengo miedo de olvidar todo lo que sabía… y de no tener futuro.']]);
+q('amir',[['Amir','Perdí contacto con mi hermana mayor. La busco en cada lista nueva.'],['Sara','Yo busco a mis padres. Esperemos noticias juntos.']])}
+function list(){setObj('Busca el nombre de tus padres en la lista de personas.');inter(73,5.2,i=>say([['Narrador','Cientos de nombres escritos a mano. Sara recorre la lista con el dedo, una y otra vez.'],['Sara','Ramírez… Ramírez… No está.'],['Doña Leila','Todavía llegan personas cada día. Que no aparezca hoy no significa nada. Seguiremos buscando.'],['Sara','(Quiero creerle. Quiero creerle con todas mis fuerzas.)']],()=>{done(i);help()}))}
+function help(){setObj('Ayuda a Doña Leila: lleva suministros.',3);const q=(x,z,t)=>inter(x,z,i=>say([['Sara',t]],()=>{done(i);if(inc())night()}));
+q(76,5,'Agua para la cocina común. En el camino no sabíamos si encontraríamos ni una gota.');q(88,2,'Cada bidón cuenta. Aquí todos cuidamos de todos.');q(95,-5.5,'Mantas y comida para las familias nuevas. Hace unos días yo era una de ellas.')}
+function night(){setObj('Visita la zona de apoyo (Cruz Roja).');inter(78,-8.4,i=>{done(i);lock=true;fade(nightmare,'Esa noche…')})}
+function nightmare(){mood(1);bomb();shake=2.5;flash();
+say([['Narrador','Es de noche. Un trueno lejano… o eso quiere creer Sara. Su cuerpo recuerda otra cosa.'],['Sara','No… otra vez no…']],()=>hold(7,'Respira… suelta las teclas y quédate quieta hasta que pase',()=>say([['Doña Leila','Estoy aquí, Sara. Respira conmigo: adentro… y afuera. El miedo no se va de golpe, pero no estás sola.']],()=>ask('Doña Leila te pregunta qué sientes.',[['“Tengo miedo de olvidar mi casa.”',[['Doña Leila','Los recuerdos no se pierden. Se guardan. Puedes llevarlos contigo.']],0],['“Tengo miedo de no volver a estudiar.”',[['Doña Leila','Tu mente sigue siendo tuya. Y hay quien está esperando para enseñarte.']],1]],()=>fade(ch4,'Diario de Sara<br>“Hay heridas que no se ven. Pero hoy alguien me escuchó, y eso pesó un poco menos.”')))))}
+/* Capítulo 4 */
+function ch4(){ch=4;lock=false;limitX=130;mood(0);clearItems();let c=0;lab('Capítulo 4<br><small>The Future We Deserve</small>');setObj('Reconstruye tu futuro con quienes te rodean.',3);
+sara.position.set(97,0,-5);omar.position.set(96,0,-4);const g=i=>{done(i);c++;inc()};
+inter(...pos.karim,i=>say([['Prof. Karim','Bienvenida al aula. No es una escuela perfecta, pero aquí la educación continúa.'],['Sara','Yo quería ser ingeniera. ¿Aún puedo?'],['Prof. Karim','Tu sueño no se perdió: cambió de forma. Empieza por aprender, un día a la vez.']],()=>g(i)));
+inter(...pos.rami,i=>say([['Rami','Estamos armando un huerto y una biblioteca con cajas. ¿Nos ayudas?'],['Sara','Claro. Construir juntos también es sanar.']],()=>g(i)));
+inter(...pos.elena,i=>say([['Elena','Sara… estoy pensando en rendirme con los estudios. ¿Para qué, si todo puede perderse otra vez?']],()=>ask('¿Qué le dices a Elena?',[['“Aprender también es resistir. No estás sola.”',[['Elena','…Tal vez tengas razón. Hoy lo intento.']],0],['“Juntas, un día a la vez. Yo estudio contigo.”',[['Elena','Eso sí puedo hacerlo. Gracias, Sara.']],1]],()=>g(i))));
+inter(127,-3.2,i=>{if(c<3)return say([['Sara','Todavía no. Primero quiero hablar con Karim, Rami y Elena.']]);
+say([['Sara','Desde aquí se ve la ciudad que dejamos. El humo… y también el sol saliendo detrás.'],['Omar','¿Mamá y papá nos encontrarán?'],['Sara','Mientras alguien nos busque, no estamos solos.']],()=>ask('¿Qué sueño eliges ahora?',[['Ser ingeniera y reconstruir escuelas',[],0],['Ser maestra para que nadie pierda su derecho a aprender',[],1],['Ser doctora para curar heridas visibles e invisibles',[],2]],finale))},false)}
+function finale(k){const m=['reconstruir escuelas, ladrillo a ladrillo','enseñar a quien más lo necesite','curar las heridas que se ven y las que no'][k];lock=true;
+say([['Sara','Mi nuevo sueño es '+m+'. Las heridas siguen aquí… pero también la esperanza.'],['Narrador','Todos los niños tienen derecho a la educación, a la protección y a un futuro.']],()=>{inc();ended=true;fade(()=>{const o=document.createElement('div');o.className='ov';o.innerHTML='<h1>Fin</h1><p>Sara sigue adelante, conservando sus recuerdos y construyendo un nuevo sueño. Gracias por vivir su historia.</p><button onclick="location.reload()">Jugar de nuevo</button>';document.body.appendChild(o)},'Millones de niñas, niños y adolescentes han perdido su escuela por la guerra. Cada uno tiene una historia como la de Sara. ¿Qué podemos hacer para que ninguno la viva?')})}
+/* ---------- bucle principal ---------- */
+const keys={};addEventListener('keydown',e=>{keys[e.code]=1;if(['KeyE','Space','Enter'].includes(e.code)){e.preventDefault();dlg?next():use()}});addEventListener('keyup',e=>keys[e.code]=0);
+$('dlg').onclick=()=>dlg&&next();
+function ok(x,z){if(x>limitX||x<-6.4)return false;if(x<6.4)return z>-5.3&&z<4.5;if(x<7.9)return Math.abs(z)<1.5;return x<66?Math.abs(z)<6.2:Math.abs(z)<14.5}
+const clk=new THREE.Clock();let wt=0,face=0;const cp=new V(0,9,9);let yaw=0,pitch=.75,zoom=1,drag=0,lx=0,ly=0;
+R.domElement.style.touchAction='none';
+R.domElement.addEventListener('pointerdown',e=>{drag=1;lx=e.clientX;ly=e.clientY});
+addEventListener('pointerup',()=>drag=0);
+addEventListener('pointermove',e=>{if(!drag)return;yaw-=(e.clientX-lx)*.006;pitch=Math.max(.3,Math.min(1.4,pitch+(e.clientY-ly)*.005));lx=e.clientX;ly=e.clientY});
+addEventListener('wheel',e=>{zoom=Math.max(.5,Math.min(1.9,zoom+e.deltaY*.001))},{passive:true});
+function tick(){requestAnimationFrame(tick);const dt=Math.min(clk.getDelta(),.05),t=clk.elapsedTime;
+let dx=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0),dz=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0),mv=0;
+if(!dlg&&!lock&&!holdCb&&(dx||dz)){const l=Math.hypot(dx,dz),rx=(dx*Math.cos(yaw)+dz*Math.sin(yaw))/l,rz=(-dx*Math.sin(yaw)+dz*Math.cos(yaw))/l,nx=sara.position.x+rx*5.2*dt,nz_=sara.position.z+rz*5.2*dt;
+if(ok(nx,sara.position.z))sara.position.x=nx;if(ok(sara.position.x,nz_))sara.position.z=nz_;face=Math.atan2(rx,rz);mv=1}
+sara.rotation.y+=Math.atan2(Math.sin(face-sara.rotation.y),Math.cos(face-sara.rotation.y))*Math.min(1,dt*12);
+const anim=(g,m)=>{g.userData.legs.forEach((l,i)=>l.rotation.x=m?Math.sin(t*11+i*Math.PI)*.7:0);g.position.y=m?Math.abs(Math.sin(t*11))*.08:Math.sin(t*2+g.id)*.015;g.userData.head.rotation.z=Math.sin(t*1.5+g.id)*.04};
+anim(sara,mv);let om=0;
+if(follow){const tx=sara.position.x-1.3,tz=sara.position.z+.9,d=Math.hypot(tx-omar.position.x,tz-omar.position.z);if(d>.5){omar.position.x+=(tx-omar.position.x)*Math.min(1,dt*4);omar.position.z+=(tz-omar.position.z)*Math.min(1,dt*4);om=1}omar.rotation.y=Math.atan2(sara.position.x-omar.position.x,sara.position.z-omar.position.z)}
+anim(omar,om);
+for(const k in NPC){const n=NPC[k];if(!n.visible)continue;anim(n,0);const d=Math.hypot(n.position.x-sara.position.x,n.position.z-sara.position.z);n.rotation.y=d<7?Math.atan2(sara.position.x-n.position.x,sara.position.z-n.position.z):0}
+items.forEach(i=>{if(i.on){i.m.position.y=2.9+Math.sin(t*3+i.x)*.15}});
+const nr=!dlg&&!lock&&!holdCb&&near();$('pr').style.display=nr?'block':'none';
+trig.forEach(r=>{if(!r.d&&sara.position.x>r.x){r.d=1;r.f()}});
+smokes.forEach(s=>{const u=s.userData;u.t=(u.t+dt*.07)%1;s.position.set(u.x+Math.sin(u.t*6+u.x)*1.5+u.t*4,2+u.t*22,u.z);const k=3+u.t*14;s.scale.set(k,k,1);s.material.opacity=.45*(1-u.t)});
+fire.intensity=3+Math.sin(t*20)*.6+Math.random()*.5;fm.scale.y=1.4+Math.sin(t*18)*.3;
+lights.forEach(a=>{if(a[0]!==fire)a[0].intensity=a[1]*(1+Math.sin(t*3+a[0].position.x)*.03)});
+if(keys.KeyQ)yaw-=dt*1.6;if(keys.KeyR)yaw+=dt*1.6;const rm=sara.position.x<9;if(rm)yaw=Math.max(-.7,Math.min(.7,yaw));
+const ds=(rm?12.4:16.7)*zoom,off=new V(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)).multiplyScalar(ds),ctr=new V(rm?sara.position.x*.35:sara.position.x,1,sara.position.z-1.5),tg=ctr.clone().add(off);cp.lerp(tg,Math.min(1,dt*5));
+cam.position.copy(cp);if(shake>0){shake-=dt;cam.position.add(new V(rnd(-1,1),rnd(-1,1),0).multiplyScalar(.35*Math.min(1,shake)))}
+cam.lookAt(ctr);
+sun.position.set(sara.position.x+45,38,sara.position.z-30);sun.target.position.copy(sara.position);
+if(holdCb){if(dx||dz)holdT=holdMax;else holdT-=dt;beat-=dt;if(beat<=0){beat=.85;thump()}$('hb').style.width=Math.max(0,(1-holdT/holdMax))*100+'%';if(holdT<=0){const f=holdCb;holdCb=null;$('hd').style.display='none';f()}}
+fear+=((holdCb?1:0)-fear)*Math.min(1,dt*3);$('red').style.opacity=fear*(.55+.3*Math.sin(t*7));
+{const pa=dust.geometry.attributes.position.array,sx=sara.position.x,sz=sara.position.z,fall=sx<9?-.05:.9;for(let i=0;i<pa.length;i+=3){pa[i]+=Math.sin(t+i)*dt*.3;pa[i+1]-=fall*dt;pa[i+2]+=Math.cos(t*.7+i)*dt*.2;if(pa[i+1]<0||pa[i+1]>14||Math.abs(pa[i]-sx)>22||Math.abs(pa[i+2]-sz)>22){pa[i]=sx+rnd(-22,22);pa[i+1]=rnd(0,14);pa[i+2]=sz+rnd(-22,22)}}dust.geometry.attributes.position.needsUpdate=true}
+R.render(S,cam)}
+addEventListener('resize',()=>{R.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
+$('go').onclick=()=>{$('ti').style.display='none';try{AC=new(window.AudioContext||window.webkitAudioContext)();drone()}catch(e){}lock=false;ch1()};
+cp.set(0,9,9);lab('');tick();
+</script></body></html>
